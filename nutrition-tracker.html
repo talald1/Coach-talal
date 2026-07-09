@@ -541,17 +541,18 @@ function removeCustomItem(idx) {
 function onCustomChange(idx, field, val) {
   const v = parseFloat(val)||0;
   state.customItems[idx][field] = v;
-  // Auto-calc calories if macros entered
   if(field!=='cal') {
     const item=state.customItems[idx];
     state.customItems[idx].cal = +((item.p*4)+(item.c*4)+(item.f*9)).toFixed(0);
     const calEl=document.getElementById('custom-cal-'+idx);
     if(calEl) calEl.value=state.customItems[idx].cal;
   }
+  saveState(currentDateKey, state);
   updateTotals();
 }
 function onCustomName(idx, val) {
   state.customItems[idx].name=val;
+  saveState(currentDateKey, state);
 }
 function renderCustomItems() {
   if(!state.customItems) state.customItems=[];
@@ -567,22 +568,22 @@ function renderCustomItems() {
         <span>🍱 وجبة ${idx+1}${item.name ? ' — '+item.name : ''}</span>
         <button class="remove-slot-btn" onclick="removeCustomItem(${idx})">✕</button>
       </div>
-      <input class="custom-item-name" type="text" placeholder="اسم الوجبة (اختياري)" value="${item.name||''}" onchange="onCustomName(${idx},this.value)">
+      <input class="custom-item-name" type="text" placeholder="اسم الوجبة (اختياري)" value="${item.name||''}" oninput="onCustomName(${idx},this.value)">
       <div class="custom-macros-row">
         <div>
-          <input class="custom-macro-input" type="number" min="0" placeholder="0" value="${item.cal||''}" id="custom-cal-${idx}" onchange="onCustomChange(${idx},'cal',this.value)">
+          <input class="custom-macro-input" type="number" min="0" placeholder="0" value="${item.cal||''}" id="custom-cal-${idx}" oninput="onCustomChange(${idx},'cal',this.value)">
           <div class="custom-macro-lbl">🔥 سعرات</div>
         </div>
         <div>
-          <input class="custom-macro-input" type="number" min="0" placeholder="0" value="${item.p||''}" onchange="onCustomChange(${idx},'p',this.value)" style="border-color:rgba(129,140,248,0.4)">
+          <input class="custom-macro-input" type="number" min="0" placeholder="0" value="${item.p||''}" oninput="onCustomChange(${idx},'p',this.value)" style="border-color:rgba(129,140,248,0.4)">
           <div class="custom-macro-lbl" style="color:#818cf8">💪 بروتين</div>
         </div>
         <div>
-          <input class="custom-macro-input" type="number" min="0" placeholder="0" value="${item.c||''}" onchange="onCustomChange(${idx},'c',this.value)" style="border-color:rgba(74,222,128,0.4)">
+          <input class="custom-macro-input" type="number" min="0" placeholder="0" value="${item.c||''}" oninput="onCustomChange(${idx},'c',this.value)" style="border-color:rgba(74,222,128,0.4)">
           <div class="custom-macro-lbl" style="color:#4ade80">🍚 كارب</div>
         </div>
         <div>
-          <input class="custom-macro-input" type="number" min="0" placeholder="0" value="${item.f||''}" onchange="onCustomChange(${idx},'f',this.value)" style="border-color:rgba(255,107,53,0.4)">
+          <input class="custom-macro-input" type="number" min="0" placeholder="0" value="${item.f||''}" oninput="onCustomChange(${idx},'f',this.value)" style="border-color:rgba(255,107,53,0.4)">
           <div class="custom-macro-lbl" style="color:#ff6b35">🫒 فات</div>
         </div>
       </div>
