@@ -125,6 +125,15 @@
 
   .save-btn { width:100%; background:rgba(74,222,128,0.1); border:1.5px solid rgba(74,222,128,0.3); color:var(--green); border-radius:12px; padding:12px; font-family:'Cairo',sans-serif; font-size:0.9rem; font-weight:700; cursor:pointer; margin-bottom:10px; }
   .reset-btn { width:100%; background:rgba(248,113,113,0.1); border:1.5px solid rgba(248,113,113,0.3); color:var(--red); border-radius:12px; padding:12px; font-family:'Cairo',sans-serif; font-size:0.9rem; font-weight:700; cursor:pointer; }
+  .custom-meal-section { background:var(--card); border-radius:16px; padding:16px; margin-bottom:16px; border:1px solid rgba(245,200,66,0.3); }
+  .custom-meal-section h2 { font-size:1rem; font-weight:800; color:var(--accent); margin-bottom:14px; }
+  .custom-item { background:var(--card2); border-radius:12px; padding:12px; margin-bottom:10px; }
+  .custom-item-name { width:100%; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:7px 10px; font-family:'Cairo',sans-serif; font-size:0.8rem; margin-bottom:8px; }
+  .custom-macros-row { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:8px; }
+  .custom-macro-input { background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:6px 4px; font-family:'Cairo',sans-serif; font-size:0.75rem; text-align:center; width:100%; }
+  .custom-macro-lbl { font-size:0.65rem; color:var(--muted); text-align:center; margin-top:3px; }
+  .custom-item-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .custom-item-header span { font-size:0.78rem; color:var(--muted); }
   .saved-badge { display:none; text-align:center; font-size:0.78rem; color:var(--green); margin-top:8px; }
   .saved-badge.show { display:block; }
 </style>
@@ -191,6 +200,11 @@
 
 <div id="meals-container"></div>
 
+<div class="custom-meal-section">
+  <h2>➕ وجبة خارجية</h2>
+  <div id="custom-items-container"></div>
+  <button class="add-more-btn" style="margin-top:4px" onclick="addCustomItem()">+ إضافة وجبة خارجية</button>
+</div>
 <button class="save-btn" id="save-btn" onclick="saveDay()">💾 حفظ اليوم</button>
 <div class="saved-badge" id="saved-badge">✅ تم الحفظ بنجاح!</div>
 <button class="reset-btn" onclick="resetDay()">🗑️ مسح اليوم الحالي</button>
@@ -285,12 +299,19 @@ function defaultState() {
     s[meal.id] = {};
     meal.groups.forEach(g => { s[meal.id][g] = [{foodIdx:0, qty:100}]; });
   });
+  s.customItems = [];
   return s;
 }
 
 function loadState(dk) {
   const saved = localStorage.getItem('ct_day_'+dk);
-  if (saved) { try { return JSON.parse(saved); } catch(e){} }
+  if (saved) {
+    try {
+      const s = JSON.parse(saved);
+      if(!s.customItems) s.customItems = [];
+      return s;
+    } catch(e){}
+  }
   return defaultState();
 }
 function saveState(dk, s) { localStorage.setItem('ct_day_'+dk, JSON.stringify(s)); }
@@ -348,6 +369,9 @@ function calcTotals(s) {
       });
     });
   });
+  (s.customItems||[]).forEach(item=>{
+    p+=item.p||0; c+=item.c||0; f+=item.f||0; cal+=item.cal||0;
+  });
   return {p,c,f,cal};
 }
 
@@ -356,6 +380,8 @@ function addSlot(mealId, group) {
   if(!state[mealId][group]) state[mealId][group]=[];
   state[mealId][group].push({foodIdx:0, qty:100});
   renderMeals();
+  if(!state.customItems) state.customItems=[];
+  renderCustomItems();
   updateTotals();
 }
 function removeSlot(mealId, group, idx) {
@@ -499,6 +525,69 @@ function updateTotals() {
     if(diff<-50) tips.push('🔥 باقي '+(-diff)+' سعرة');
     msg.className='status-msg low'; msg.textContent=tips.join('  •  ');
   }
+}
+
+function addCustomItem() {
+  if(!state.customItems) state.customItems=[];
+  state.customItems.push({name:'', p:0, c:0, f:0, cal:0});
+  renderCustomItems();
+  updateTotals();
+}
+function removeCustomItem(idx) {
+  state.customItems.splice(idx,1);
+  renderCustomItems();
+  updateTotals();
+}
+function onCustomChange(idx, field, val) {
+  const v = parseFloat(val)||0;
+  state.customItems[idx][field] = v;
+  // Auto-calc calories if macros entered
+  if(field!=='cal') {
+    const item=state.customItems[idx];
+    state.customItems[idx].cal = +((item.p*4)+(item.c*4)+(item.f*9)).toFixed(0);
+    const calEl=document.getElementById('custom-cal-'+idx);
+    if(calEl) calEl.value=state.customItems[idx].cal;
+  }
+  updateTotals();
+}
+function onCustomName(idx, val) {
+  state.customItems[idx].name=val;
+}
+function renderCustomItems() {
+  if(!state.customItems) state.customItems=[];
+  const container=document.getElementById('custom-items-container');
+  if(!container) return;
+  if(state.customItems.length===0) {
+    container.innerHTML='';
+    return;
+  }
+  container.innerHTML=state.customItems.map((item,idx)=>`
+    <div class="custom-item">
+      <div class="custom-item-header">
+        <span>🍱 وجبة ${idx+1}${item.name ? ' — '+item.name : ''}</span>
+        <button class="remove-slot-btn" onclick="removeCustomItem(${idx})">✕</button>
+      </div>
+      <input class="custom-item-name" type="text" placeholder="اسم الوجبة (اختياري)" value="${item.name||''}" onchange="onCustomName(${idx},this.value)">
+      <div class="custom-macros-row">
+        <div>
+          <input class="custom-macro-input" type="number" min="0" placeholder="0" value="${item.cal||''}" id="custom-cal-${idx}" onchange="onCustomChange(${idx},'cal',this.value)">
+          <div class="custom-macro-lbl">🔥 سعرات</div>
+        </div>
+        <div>
+          <input class="custom-macro-input" type="number" min="0" placeholder="0" value="${item.p||''}" onchange="onCustomChange(${idx},'p',this.value)" style="border-color:rgba(129,140,248,0.4)">
+          <div class="custom-macro-lbl" style="color:#818cf8">💪 بروتين</div>
+        </div>
+        <div>
+          <input class="custom-macro-input" type="number" min="0" placeholder="0" value="${item.c||''}" onchange="onCustomChange(${idx},'c',this.value)" style="border-color:rgba(74,222,128,0.4)">
+          <div class="custom-macro-lbl" style="color:#4ade80">🍚 كارب</div>
+        </div>
+        <div>
+          <input class="custom-macro-input" type="number" min="0" placeholder="0" value="${item.f||''}" onchange="onCustomChange(${idx},'f',this.value)" style="border-color:rgba(255,107,53,0.4)">
+          <div class="custom-macro-lbl" style="color:#ff6b35">🫒 فات</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
 }
 
 function renderAll() {
