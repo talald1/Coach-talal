@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Coach Talal - طيف</title>
+<title>Coach Talal - تيف</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Bebas+Neue&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -164,9 +164,9 @@
 </div>
 
 <div class="targets">
-  <div class="target-box"><div class="val">1510</div><div class="lbl">سعرات</div></div>
+  <div class="target-box"><div class="val">1570</div><div class="lbl">سعرات</div></div>
   <div class="target-box"><div class="val" style="color:#818cf8">130</div><div class="lbl">بروتين (جم)</div></div>
-  <div class="target-box"><div class="val" style="color:#4ade80">135</div><div class="lbl">كارب (جم)</div></div>
+  <div class="target-box"><div class="val" style="color:#4ade80">150</div><div class="lbl">كارب (جم)</div></div>
   <div class="target-box"><div class="val" style="color:#ff6b35">50</div><div class="lbl">فات (جم)</div></div>
 </div>
 
@@ -277,7 +277,7 @@ const foods = {
   ]
 };
 
-const TARGETS = { cal:1510, p:130, c:135, f:50 };
+const TARGETS = { cal:1570, p:130, c:150, f:50 };
 const mealConfig = [
   { id:'breakfast', label:'🌅 الفطور',  groups:['protein','carb','snack'] },
   { id:'lunch',     label:'🍽️ الغداء',  groups:['protein','carb','snack'] },
@@ -316,6 +316,13 @@ function loadState(dk) {
     try {
       const s = JSON.parse(saved);
       if(!s.customItems) s.customItems = [];
+      // Make sure all meal groups exist
+      mealConfig.forEach(meal => {
+        if(!s[meal.id]) s[meal.id]={};
+        meal.groups.forEach(g => {
+          if(!s[meal.id][g]) s[meal.id][g]=[{foodIdx:0,qty:100}];
+        });
+      });
       return s;
     } catch(e){}
   }
@@ -545,11 +552,13 @@ function updateTotals() {
 function addCustomItem() {
   if(!state.customItems) state.customItems=[];
   state.customItems.push({name:'', p:0, c:0, f:0, cal:0});
+  saveState(currentDateKey, state);
   renderCustomItems();
   updateTotals();
 }
 function removeCustomItem(idx) {
   state.customItems.splice(idx,1);
+  saveState(currentDateKey, state);
   renderCustomItems();
   updateTotals();
 }
@@ -573,6 +582,8 @@ function renderCustomItems() {
   if(!state.customItems) state.customItems=[];
   const container=document.getElementById('custom-items-container');
   if(!container) return;
+  // Always auto-save current state so items persist
+  saveState(currentDateKey, state);
   if(state.customItems.length===0) {
     container.innerHTML='';
     return;
